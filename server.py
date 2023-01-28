@@ -20,8 +20,11 @@ class Bot:
         self.vk_api = self.vk.get_api()
         self.waitlist = WaitList()
         self.admin = Admin()
-        self.admin.load_from_json()
-        self.database = Database("")
+        self.database = Database()
+        resp_flag, resp_text = self.database.init_table()
+        if resp_flag is False:
+            exit(resp_text)
+        # unpickle(self.waitlist)
         self.menu_functions = {'buy_cert': self.initialize_buy_certificate,
                                'reg_bonus': self.initialize_user_registration,
                                'get_balance': self.initialize_get_bonus_balance,
@@ -65,7 +68,7 @@ class Bot:
         print(f"{cert_price=} {text}")
         self.waitlist.add_user_to_waitlist(user_id, "email", text)
         self.waitlist.add_user_to_waitlist(user_id, "cheque", cert_price)
-        name = " ".join(self.get_user_name_lastname(user_id))
+        name = " ".join(self.get_first_name_last_name(user_id))
         email = self.waitlist.get_user_data(user_id, "email")
         m = to_admin_processing_certificate.format(name, user_id, email, cert_price)
         self.send_msg(to_user=self.admin.manager, message=m)
@@ -74,38 +77,55 @@ class Bot:
                       keyboard=pay_link_keyboard(cert_price))
 
     def process_ask_manager(self, user_id, text):
-        name = " ".join(self.get_user_name_lastname(user_id))
+        name = " ".join(self.get_first_name_last_name(user_id))
         msg = to_admin_customer_question.format(name, user_id, text)
         self.send_msg(to_user=self.admin.manager, message=msg)
         self.send_msg(to_user=user_id, message=ask_manager_confirmation)
 
     def process_user_registration(self, user_id, text):
-        name = " ".join(self.get_user_name_lastname(user_id))
+        name = " ".join(self.get_first_name_last_name(user_id))
         msg = to_admin_customer_registration.format(name, user_id, text)
         self.send_msg(to_user=self.admin.manager, message=msg)
         self.send_msg(to_user=user_id, message=registration_confirmation)
 
     def process_get_bonus_balance(self, user_id, text):
         result = self.database.get_balance_by_phone(text)
-        if result is None:
-            response = get_balance_incorrect_number
-        else:
-            response = get_balance_response.format(text, result)
+        response = get_balance_response.format(result)
         self.send_msg(to_user=user_id, message=response)
 
     def process_cheque(self, user_id, text, message):
         print("Процессим чек")
-        name = " ".join(self.get_user_name_lastname(user_id))
+        name = " ".join(self.get_first_name_last_name(user_id))
         tmp = to_admin_buy_certificate.format(name, user_id, self.waitlist.get_user_data(user_id, "email"),
                                               self.waitlist.get_user_data(user_id, "cheque"), text)
         self.send_msg(to_user=self.admin.manager, message=tmp, attachments=get_attachments_links(message.attachments))
-        self.send_msg(to_user=user_id, message=certificate_after_payment, keyboard=default_keyboard)
+        self.send_msg(to_user=user_id, message=certificate_after_payment)
+        self.send_default_keyboard(user_id)
 
     def process_attachments(self, user_id, text, message):
         print("Процессим прикрепленки")
-        name = " ".join(self.get_user_name_lastname(user_id))
+        name = " ".join(self.get_first_name_last_name(user_id))
         tmp = to_admin_photo_attachment.format(name, user_id, text)
         self.send_msg(to_user=self.admin.manager, message=tmp, attachments=get_attachments_links(message.attachments))
+
+    def process_new_db(self, user_id, message):
+        for attachment in message.attachments:
+            print(attachment)
+            if attachment["type"] == "doc" and attachment["doc"]["ext"] == "xlsx":
+                print("найден прикрепленный документ xlsx")
+                self.send_msg(to_user=user_id, message="Файл получен.", keyboard=default_admin_keyboard)
+                self.waitlist.user_waitlist_reset(user_id)
+                resp_flag, resp_text = self.database.update_table(attachment["doc"]["url"])
+                if user_id != self.admin.manager:
+                    self.send_msg(to_user=user_id, message=resp_text)
+                self.send_msg(to_user=self.admin.manager, message=resp_text)
+                break
+        else:
+            tmp = "В сообщении отсутствует документ .xlsx. Повторите ещё раз."
+            self.waitlist.user_waitlist_reset(user_id)
+            self.send_msg(to_user=user_id, message=tmp, keyboard=default_admin_keyboard)
+            if user_id != self.admin.manager:
+                self.send_msg(to_user=self.admin.manager, message=tmp)
 
     # Менеджер сообщений, которые пользователь написал сам, а не сгенерировал нажатием кнопки
     def controller_text(self, user_id, text, message):
@@ -132,9 +152,18 @@ class Bot:
         # А если что-то прикрепил к сообщению, тогда пересылаем администратору
         else:
             if message.attachments:
-                self.process_attachments(user_id, text, message)
-                # Добавить ветку на прикрепленку xlsx документа от админа
-            self.send_default_keyboard(user_id)
+                if user_id not in self.admin.admin_list:
+                    self.process_attachments(user_id, text, message)
+                    self.send_default_keyboard(user_id)
+                else:
+                    if self.waitlist.get_user_data(user_id, "admin_new_db"):
+                        self.process_new_db(user_id, message)
+                        return
+                    else:
+                        self.process_attachments(user_id, text, message)
+                        self.send_msg(to_user=user_id, keyboard=default_admin_keyboard)
+            else:
+                self.send_default_keyboard(user_id)
 
         self.waitlist.user_waitlist_reset(user_id)
 
@@ -158,7 +187,7 @@ class Bot:
             self.send_default_keyboard(user_id)
         elif command == "to_cert":
             # Сообщение админу об отмене покупки на этапе оплаты
-            name = " ".join(self.get_user_name_lastname(user_id))
+            name = " ".join(self.get_first_name_last_name(user_id))
             self.send_msg(to_user=self.admin.manager, message=to_admin_cancel_certificate.format(
                 name, user_id, self.waitlist.get_user_data(user_id, "cheque")))
 
@@ -177,13 +206,18 @@ class Bot:
 
         elif command == "new_database":
             self.send_msg(to_user=user_id, message="Отправьте .xlsx файл в ответном сообщении.")
+            self.waitlist.add_user_to_waitlist(user_id, "admin_new_db")
 
         elif command == "set_manager":
-            admin_names = [self.get_user_name_lastname(admin) for admin in self.admin.admin_list]
+            admin_names = [self.get_first_name_last_name(admin) for admin in self.admin.admin_list]
             print(f"{admin_names=}")
+            if self.admin.manager in self.admin.admin_list:
+                current_manager_id = self.admin.admin_list.index(self.admin.manager)
+            else:
+                current_manager_id = None
             self.send_msg(to_user=user_id,
                           message="Выберите, кому будут приходить уведомления",
-                          keyboard=admin_set_manager_keyboard(admin_names))
+                          keyboard=admin_set_manager_keyboard(admin_names, current_manager_id))
 
         elif type(command) is str and command.startswith("set_"):
             print(command, command[4:])
@@ -226,7 +260,7 @@ class Bot:
             payload = json.loads(event.message.payload)
             self.controller_payload(user_id, payload)
 
-    def get_user_name_lastname(self, user_id) -> tuple:
+    def get_first_name_last_name(self, user_id) -> tuple:
         user_info = self.vk_api.users.get(user_ids=user_id)[0]
         name = user_info['first_name']
         lastname = user_info['last_name']
@@ -235,4 +269,5 @@ class Bot:
     def start(self):
         for event in self.long_poll.listen():
             self.controller(event)
-
+            self.waitlist.printer()
+            self.waitlist.serialize_current_state()

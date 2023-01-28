@@ -7,10 +7,11 @@ class Admin:
         self.file_path = "settings/admins.json"
         self.admin_list = []
         self.manager = None
+        self.load_from_json()
 
     def load_from_json(self):
         if "admins.json" not in os.listdir("settings"):
-            exit("Ошибка. Файл 'admins.json' отсутствует")
+            exit("Ошибка. Файл 'admins.json' отсутствует в папке settings")
         try:
             with open(self.file_path, "r") as fp:
                 data = json.load(fp)

@@ -12,6 +12,5 @@ def get_attachments_links(attachments):
             result.append(f"{att_type}{owner_id}_{att_id}_{access_key}")
         else:
             result.append(f"{att_type}{owner_id}_{att_id}")
-        # result.append(f"{att_type}{owner_id}_{photo_id}")
     print(result)
     return ",".join(result)

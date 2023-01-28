@@ -35,7 +35,7 @@ default_keyboard_constructor(default_keyboard)
 
 
 default_admin_keyboard = VkKeyboard(one_time=False)
-default_admin_keyboard.add_button(label="Админка",
+default_admin_keyboard.add_button(label="Администрирование бота",
                                   color=VkKeyboardColor.POSITIVE,
                                   payload={"admin": "get_admin_menu"})
 default_admin_keyboard.add_line()
@@ -84,7 +84,7 @@ admin_menu_keyboard.add_button(label="Обновить базу данных",
                                color=VkKeyboardColor.PRIMARY,
                                payload={"admin": "new_database"})
 admin_menu_keyboard.add_line()
-admin_menu_keyboard.add_button(label="Назначить менеджера",
+admin_menu_keyboard.add_button(label="Сменить менеджера",
                                color=VkKeyboardColor.PRIMARY,
                                payload={"admin": "set_manager"})
 admin_menu_keyboard.add_line()
@@ -96,10 +96,11 @@ admin_menu_keyboard.add_button(label="Назад",
 # ----------------------------------------------------------------------------------------------------------------------
 # Админская клавиатура для выбора менеджера
 
-def admin_set_manager_keyboard(admin_list):
+def admin_set_manager_keyboard(admin_list, current_manager_id):
     tmp_keyboard = VkKeyboard(one_time=False)
     for index, admin_name in enumerate(admin_list[:9]):
-
+        if index == current_manager_id:
+            admin_name = *admin_name, "(выбрано)"
         tmp_keyboard.add_button(label=" ".join(admin_name),
                                 color=VkKeyboardColor.PRIMARY,
                                 payload={"admin": f"set_{index}"})
@@ -107,6 +108,6 @@ def admin_set_manager_keyboard(admin_list):
 
     tmp_keyboard.add_button(label="Назад",
                             color=VkKeyboardColor.NEGATIVE,
-                            payload={"back": "to_menu"})
+                            payload={"admin": "get_admin_menu"})
     return tmp_keyboard
 

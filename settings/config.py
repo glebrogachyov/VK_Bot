@@ -5,10 +5,10 @@ link_collection = "https://vk.com/albums-9322969"
 link_address = "https://vk.com/frimis_ru?w=address-9322969_53567"
 
 link_buy_cert = {
-    "500": "https://ya.ru/search?text=500",
-    "1000": "https://ya.ru/search?text=1000",
-    "1500": "https://ya.ru/search?text=1500",
-    "2000": "https://ya.ru/search?text=2000",
-    "2500": "https://ya.ru/search?text=2500",
-    "3000": "https://ya.ru/search?text=3000"
+    "500": "https://securepayments.sberbank.ru/shortlink/Yo45xbM2",
+    "1000": "https://securepayments.sberbank.ru/shortlink/9GehROx0",
+    "1500": "https://securepayments.sberbank.ru/shortlink/gvyqQXwC",
+    "2000": "https://securepayments.sberbank.ru/shortlink/UYB3qE4B",
+    "2500": "https://securepayments.sberbank.ru/shortlink/LDGfniOj",
+    "3000": "https://securepayments.sberbank.ru/shortlink/za95Cefl",
 }
