@@ -110,6 +110,6 @@ class Database:
         elif 1 < len(query) < 6:
             return multiple_balance_found.format(phone_number, ', '.join([q for q in query['balance']])), True
         elif len(query) > 5:
-            return too_many_balances, True
+            return too_many_balances.format(phone_number), True
         else:
             return balance_not_found.format(phone_number), False

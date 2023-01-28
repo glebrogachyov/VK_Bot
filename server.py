@@ -254,6 +254,5 @@ class Bot:
     def start(self):
         for event in self.long_poll.listen():
             self.controller(event)
-            print("-------")
-            self.waitlist.printer()
-            # self.waitlist.serialize_current_state()
+            # print("-------")
+            # self.waitlist.printer()

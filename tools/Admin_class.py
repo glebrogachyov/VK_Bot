@@ -9,6 +9,8 @@ class Admin:
         self.admin_list = []
         self.manager = None
         self.load_from_json()
+        if not self.manager:
+            self.manager = self.admin_list[0]
 
     def load_from_json(self):
         if "admin_list.json" not in os.listdir("settings"):
@@ -18,6 +20,8 @@ class Admin:
             with open(self.admin_file, "r") as fp:
                 data = json.load(fp)
                 self.admin_list = data.get("admin_list")
+                if not self.admin_list:
+                    exit("Пустой список администраторов.")
             if "admin_manager.json" in os.listdir("settings"):
                 with open(self.manager_file, "r") as fp:
                     data = json.load(fp)
@@ -25,6 +29,8 @@ class Admin:
 
         except json.JSONDecodeError:
             exit("Ошибка во время чтения файла 'settings/admin_list.json' или 'settings/admin_manager.json'.")
+        except Exception as e:
+            exit(f"Ошибка во время чтения файла 'settings/admin_list.json' или 'settings/admin_manager.json'.\n{e}")
 
     def write_to_json(self):
         # with open(self.admin_file, "w") as fp:        # Раскомментировать если понадобится создать файл списка админов
