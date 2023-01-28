@@ -47,8 +47,8 @@ default_keyboard_constructor(default_admin_keyboard)
 
 buy_certificate_keyboard = VkKeyboard(one_time=False)
 
-for price in link_buy_cert:
-    buy_certificate_keyboard.add_button(label=price, color=VkKeyboardColor.POSITIVE, payload={"buy_cert": price})
+for value in link_buy_cert:
+    buy_certificate_keyboard.add_button(label=value, color=VkKeyboardColor.POSITIVE, payload={"buy_cert": value})
     buy_certificate_keyboard.add_line()
 
 buy_certificate_keyboard.add_button(label="Назад", color=VkKeyboardColor.NEGATIVE, payload={"back": "to_menu"})

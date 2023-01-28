@@ -24,12 +24,17 @@ class Bot:
         resp_flag, resp_text = self.database.init_table()
         if resp_flag is False:
             exit(resp_text)
-        # unpickle(self.waitlist)
         self.menu_functions = {'buy_cert': self.initialize_buy_certificate,
                                'reg_bonus': self.initialize_user_registration,
                                'get_balance': self.initialize_get_bonus_balance,
                                'ask_manager': self.initialize_ask_manager
                                }
+
+    def get_first_name_last_name(self, user_id) -> tuple:
+        user_info = self.vk_api.users.get(user_ids=user_id)[0]
+        first_name = user_info['first_name']
+        last_name = user_info['last_name']
+        return first_name, last_name
 
     def send_msg(self, to_user, message="Выберите:", keyboard=None, attachments=None):
         msg_content = {"peer_id": to_user,
@@ -43,7 +48,6 @@ class Bot:
         self.vk_api.messages.send(**msg_content)
 
     def send_default_keyboard(self, user_id):
-        # Добавить ветвление на клавиатуру обычного юзера и админа
         if user_id in self.admin.admin_list:
             self.send_msg(to_user=user_id, keyboard=default_admin_keyboard)
         else:
@@ -65,7 +69,6 @@ class Bot:
         self.send_msg(to_user=user_id, message=ask_manager_message)
 
     def process_buy_certificate(self, user_id, text, cert_price):
-        print(f"{cert_price=} {text}")
         self.waitlist.add_user_to_waitlist(user_id, "email", text)
         self.waitlist.add_user_to_waitlist(user_id, "cheque", cert_price)
         name = " ".join(self.get_first_name_last_name(user_id))
@@ -94,7 +97,6 @@ class Bot:
         self.send_msg(to_user=user_id, message=response)
 
     def process_cheque(self, user_id, text, message):
-        print("Процессим чек")
         name = " ".join(self.get_first_name_last_name(user_id))
         tmp = to_admin_buy_certificate.format(name, user_id, self.waitlist.get_user_data(user_id, "email"),
                                               self.waitlist.get_user_data(user_id, "cheque"), text)
@@ -103,16 +105,13 @@ class Bot:
         self.send_default_keyboard(user_id)
 
     def process_attachments(self, user_id, text, message):
-        print("Процессим прикрепленки")
         name = " ".join(self.get_first_name_last_name(user_id))
         tmp = to_admin_photo_attachment.format(name, user_id, text)
         self.send_msg(to_user=self.admin.manager, message=tmp, attachments=get_attachments_links(message.attachments))
 
     def process_new_db(self, user_id, message):
         for attachment in message.attachments:
-            print(attachment)
             if attachment["type"] == "doc" and attachment["doc"]["ext"] == "xlsx":
-                print("найден прикрепленный документ xlsx")
                 self.send_msg(to_user=user_id, message="Файл получен.", keyboard=default_admin_keyboard)
                 self.waitlist.user_waitlist_reset(user_id)
                 resp_flag, resp_text = self.database.update_table(attachment["doc"]["url"])
@@ -132,7 +131,6 @@ class Bot:
 
         # Если ожидаем от пользователя информацию для дальнейшей обработки
         if self.waitlist.get_user_data(user_id, "cheque"):
-            print("-\nentered process cheque")
             self.process_cheque(user_id, text, message)
 
         elif cert_price := self.waitlist.get_user_data(user_id, "email"):
@@ -171,18 +169,15 @@ class Bot:
     def payload_menu(self, user_id, option):
         self.waitlist.user_waitlist_reset(user_id)
         handler = self.menu_functions.get(option)
-        print(f"Payload - menu\n{handler=}")
         handler(user_id)
 
     # Обработчик кнопок покупки сертификата
     def payload_buy_certificate(self, user_id, price):
-        print(f"Payload - buy certificate, {price=}")
         self.waitlist.add_user_to_waitlist(user_id, "email", price)
         self.send_msg(to_user=user_id, message=certificate_enter_email, keyboard=back_keyboard)
 
     # обработчик кнопок "Назад"
     def payload_back_button(self, user_id, command):
-        print(f"Payload - back, {command=}")
         if command == "to_menu":
             self.send_default_keyboard(user_id)
         elif command == "to_cert":
@@ -210,7 +205,6 @@ class Bot:
 
         elif command == "set_manager":
             admin_names = [self.get_first_name_last_name(admin) for admin in self.admin.admin_list]
-            print(f"{admin_names=}")
             if self.admin.manager in self.admin.admin_list:
                 current_manager_id = self.admin.admin_list.index(self.admin.manager)
             else:
@@ -220,7 +214,6 @@ class Bot:
                           keyboard=admin_set_manager_keyboard(admin_names, current_manager_id))
 
         elif type(command) is str and command.startswith("set_"):
-            print(command, command[4:])
             response = self.admin.change_manager(int(command[4:]))
             self.send_msg(to_user=user_id, message=response, keyboard=default_admin_keyboard)
 
@@ -239,20 +232,14 @@ class Bot:
             self.payload_admin(user_id, admin_command)
 
         else:   # Если пришёл странный payload (например, могла устареть клавиатура при обновлении, либо ручной запрос)
-            print(f"unknown {payload=}")
             self.send_default_keyboard(user_id)
 
     def controller(self, event):
-        print("\n---\n", event)
-        self.waitlist.printer()
-        print(event.message.attachments)
         user_id = event.message.from_id
         text = event.message.text
-        print(f"{text=}")
 
         # Если пользователь написал сообщение, передаём его контроллеру текста
         if event.message.payload is None:
-            print("Payload - None")
             self.controller_text(user_id, text, event.message)
 
         # Если пользователь нажал на кнопку, передаём её контроллеру кнопок
@@ -260,14 +247,9 @@ class Bot:
             payload = json.loads(event.message.payload)
             self.controller_payload(user_id, payload)
 
-    def get_first_name_last_name(self, user_id) -> tuple:
-        user_info = self.vk_api.users.get(user_ids=user_id)[0]
-        name = user_info['first_name']
-        lastname = user_info['last_name']
-        return name, lastname
-
     def start(self):
         for event in self.long_poll.listen():
             self.controller(event)
+            print("-------")
             self.waitlist.printer()
             self.waitlist.serialize_current_state()

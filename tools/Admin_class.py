@@ -19,7 +19,7 @@ class Admin:
             self.manager = data.get("manager_id")
             return "Список администраторов прочитан успешно."
         except json.JSONDecodeError:
-            exit("Ошибка во время чтения файла.")
+            exit("Ошибка во время чтения файла 'settings/admins.json'.")
 
     def write_to_json(self):
         data = {"admin_id_list": self.admin_list, "manager_id": self.manager}
