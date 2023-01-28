@@ -2,46 +2,41 @@ from typing import Literal
 import pickle
 import os
 allowed_values = Literal["email", "phone", "reg", "ask", "cheque", "admin_new_db"]
+pkl_path = {"email": "email.pkl",
+            "phone": "phone_number.pkl",
+            "reg": "register_info.pkl",
+            "ask": "ask_manager.pkl",
+            "cheque": "cheque.pkl",
+            "admin_new_db": "new_db.pkl"}
 
 
 class WaitList:
     def __init__(self):
-        self.email = unpickle("email.pkl")
-        self.phone_number = unpickle("phone_number.pkl")
-        self.register_info = unpickle("register_info.pkl")
-        self.ask_manager = unpickle("ask_manager.pkl")
-        self.cheque = unpickle("cheque.pkl")
-        self.new_db = unpickle("new_db.pkl")
+        self.email = unpickle(pkl_path["email"])
+        self.phone_number = unpickle(pkl_path["phone"])
+        self.register_info = unpickle(pkl_path["reg"])
+        self.ask_manager = unpickle(pkl_path["ask"])
+        self.cheque = unpickle(pkl_path["cheque"])
+        self.new_db = unpickle(pkl_path["admin_new_db"])
         self.aliases = {"email": self.email,
                         "phone": self.phone_number,
                         "reg": self.register_info,
                         "ask": self.ask_manager,
                         "cheque": self.cheque,
                         "admin_new_db": self.new_db}
-        self.printer()
+        # self.printer()
 
     def add_user_to_waitlist(self, user_id, list_alias: allowed_values, val=True):
         self.aliases[list_alias][user_id] = val
+        with open("pickles/" + pkl_path[list_alias], "wb") as file:
+            pickle.dump(self.aliases[list_alias], file)
 
     def user_waitlist_reset(self, user_id):
-        for waitlist in self.aliases.values():
+        for list_alias, waitlist in self.aliases.items():
             if user_id in waitlist:
                 waitlist.pop(user_id)
-
-    def serialize_current_state(self):
-        with open("pickles/email.pkl", "wb") as file:
-            pickle.dump(self.email, file)
-        with open("pickles/phone_number.pkl", "wb") as file:
-            pickle.dump(self.phone_number, file)
-        with open("pickles/register_info.pkl", "wb") as file:
-            pickle.dump(self.register_info, file)
-        with open("pickles/ask_manager.pkl", "wb") as file:
-            pickle.dump(self.ask_manager, file)
-        with open("pickles/cheque.pkl", "wb") as file:
-            pickle.dump(self.cheque, file)
-        with open("pickles/new_db.pkl", "wb") as file:
-            pickle.dump(self.new_db, file)
-        print("pickled")
+                with open("pickles/" + pkl_path[list_alias], "wb") as file:
+                    pickle.dump(self.aliases[list_alias], file)
 
     def get_user_data(self, user_id, list_alias: allowed_values):
         return self.aliases[list_alias].get(user_id)

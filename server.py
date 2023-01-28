@@ -21,9 +21,10 @@ class Bot:
         self.waitlist = WaitList()
         self.admin = Admin()
         self.database = Database()
-        resp_flag, resp_text = self.database.init_table()
+        resp_flag, resp_text = self.database.init_table(first_load=True)
         if resp_flag is False:
-            exit(resp_text)
+            # exit(1488)
+            print("База данных не была инициализирована")
         self.menu_functions = {'buy_cert': self.initialize_buy_certificate,
                                'reg_bonus': self.initialize_user_registration,
                                'get_balance': self.initialize_get_bonus_balance,
@@ -92,8 +93,11 @@ class Bot:
         self.send_msg(to_user=user_id, message=registration_confirmation)
 
     def process_get_bonus_balance(self, user_id, text):
-        result = self.database.get_balance_by_phone(text)
+        result, error = self.database.get_balance_by_phone(text)
         response = get_balance_response.format(result)
+        if error and user_id not in self.admin.admin_list:
+            self.send_msg(to_user=self.admin.manager,
+                          message=f"Ошибка поиска номера {text} в базе данных. Ответ на запрос: {response}")
         self.send_msg(to_user=user_id, message=response)
 
     def process_cheque(self, user_id, text, message):
@@ -197,7 +201,7 @@ class Bot:
             return
 
         if command == "get_admin_menu":
-            self.send_msg(user_id, message="Админ панель:", keyboard=admin_menu_keyboard)
+            self.send_msg(user_id, message="Панель администратора:", keyboard=admin_menu_keyboard)
 
         elif command == "new_database":
             self.send_msg(to_user=user_id, message="Отправьте .xlsx файл в ответном сообщении.")
@@ -252,4 +256,4 @@ class Bot:
             self.controller(event)
             print("-------")
             self.waitlist.printer()
-            self.waitlist.serialize_current_state()
+            # self.waitlist.serialize_current_state()
