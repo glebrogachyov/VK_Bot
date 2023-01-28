@@ -23,7 +23,6 @@ class Bot:
         self.database = Database()
         resp_flag, resp_text = self.database.init_table(first_load=True)
         if resp_flag is False:
-            # exit(1488)
             print("База данных не была инициализирована")
         self.menu_functions = {'buy_cert': self.initialize_buy_certificate,
                                'reg_bonus': self.initialize_user_registration,
@@ -254,5 +253,5 @@ class Bot:
     def start(self):
         for event in self.long_poll.listen():
             self.controller(event)
-            # print("-------")
-            # self.waitlist.printer()
+            print("-------")
+            self.waitlist.printer()
