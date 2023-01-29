@@ -64,7 +64,7 @@ class Database:
         # Если на предыдущих этапах таблица не упала, тогда удаляем старую. Иначе удаляем новую и ничего не меняем
         if resp_flag:
             self.database, self.tmp_table = self.tmp_table, None
-            if "db.xlsx" in os.listdir("data"):
+            if "db.xlsx" in os.listdir("tmp_files/data"):
                 os.remove(excel_file_path)  # удаляем старую таблицу
             os.rename(tmp_file_path, excel_file_path)  # переименовываем файл новой таблицы, делая его основным
         else:

@@ -1,5 +1,5 @@
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
-from settings.config import link_collection, link_address, link_buy_cert
+from settings.config import link_one, link_two, link_buy_cert
 
 
 def default_keyboard_constructor(keyboard):
@@ -19,9 +19,9 @@ def default_keyboard_constructor(keyboard):
                         color=VkKeyboardColor.PRIMARY,
                         payload={"menu": "ask_manager"})
     keyboard.add_line()
-    keyboard.add_openlink_button(label="Посмотреть коллекцию", link=link_collection)
+    keyboard.add_openlink_button(label="Посмотреть коллекцию", link=link_one)
     keyboard.add_line()
-    keyboard.add_openlink_button(label="Адреса магазинов", link=link_address)
+    keyboard.add_openlink_button(label="Адреса магазинов", link=link_two)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Клавиатура главного меню

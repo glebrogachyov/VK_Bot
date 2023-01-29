@@ -28,14 +28,14 @@ class WaitList:
 
     def add_user_to_waitlist(self, user_id, list_alias: allowed_values, val=True):
         self.aliases[list_alias][user_id] = val
-        with open("pickles/" + pkl_path[list_alias], "wb") as file:
+        with open("tmp_files/pickles/" + pkl_path[list_alias], "wb") as file:
             pickle.dump(self.aliases[list_alias], file)
 
     def user_waitlist_reset(self, user_id):
         for list_alias, waitlist in self.aliases.items():
             if user_id in waitlist:
                 waitlist.pop(user_id)
-                with open("pickles/" + pkl_path[list_alias], "wb") as file:
+                with open("tmp_files/pickles/" + pkl_path[list_alias], "wb") as file:
                     pickle.dump(self.aliases[list_alias], file)
 
     def get_user_data(self, user_id, list_alias: allowed_values):
@@ -47,7 +47,7 @@ class WaitList:
 
 
 def unpickle(filename):
-    if filename in os.listdir("pickles"):
-        with open("pickles/"+filename, "rb") as file:
+    if filename in os.listdir("tmp_files/pickles"):
+        with open("tmp_files/pickles/"+filename, "rb") as file:
             return pickle.load(file)
     return dict()
