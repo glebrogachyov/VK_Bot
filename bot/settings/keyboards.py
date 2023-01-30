@@ -1,5 +1,5 @@
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
-from settings.config import link_one, link_two, link_buy_cert
+from settings.config import link_one, link_two, link_buy_cert, contest_running
 
 
 def default_keyboard_constructor(keyboard):
@@ -19,6 +19,12 @@ def default_keyboard_constructor(keyboard):
                         color=VkKeyboardColor.PRIMARY,
                         payload={"menu": "ask_manager"})
     keyboard.add_line()
+    if contest_running:
+        keyboard.add_button(label="Принять участие в конкурсе",
+                            color=VkKeyboardColor.POSITIVE,
+                            payload={"menu": "contest"})
+        keyboard.add_line()
+
     keyboard.add_openlink_button(label="Посмотреть коллекцию", link=link_one)
     keyboard.add_line()
     keyboard.add_openlink_button(label="Адреса магазинов", link=link_two)

@@ -4,6 +4,8 @@ from settings.config import token, group_id
 
 bot = Bot(token, group_id)
 
+bot.start()
+
 while True:
     try:
         print("Bot started.")

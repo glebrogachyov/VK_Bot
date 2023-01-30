@@ -4,11 +4,13 @@ from vk_api.utils import get_random_id
 
 from settings.keyboards import *
 from settings.messages import *
+from settings.config import contest_running
 
 from tools.functions import get_attachments_links
 from tools.Admin_class import Admin
 from tools.Database_class import Database
 from tools.Waitlist_class import WaitList
+from tools.Contest_class import Contest
 
 import json
 
@@ -21,13 +23,16 @@ class Bot:
         self.waitlist = WaitList()
         self.admin = Admin()
         self.database = Database()
+        if contest_running:
+            self.contest = Contest()
         resp_flag, resp_text = self.database.init_table(first_load=True)
         if resp_flag is False:
             print("База данных не была инициализирована")
         self.menu_functions = {'buy_cert': self.initialize_buy_certificate,
                                'reg_bonus': self.initialize_user_registration,
                                'get_balance': self.initialize_get_bonus_balance,
-                               'ask_manager': self.initialize_ask_manager
+                               'ask_manager': self.initialize_ask_manager,
+                               'contest': self.process_contest
                                }
 
     def get_first_name_last_name(self, user_id) -> tuple:
@@ -47,26 +52,35 @@ class Bot:
             msg_content["attachment"] = attachments
         self.vk_api.messages.send(**msg_content)
 
-    def send_default_keyboard(self, user_id):
-        if user_id in self.admin.admin_list:
-            self.send_msg(to_user=user_id, keyboard=default_admin_keyboard)
+    def send_default_keyboard(self, to_user, message=None):
+        if to_user in self.admin.admin_list:
+            if message:
+                self.send_msg(to_user=to_user, message=message, keyboard=default_admin_keyboard)
+            else:
+                self.send_msg(to_user=to_user, keyboard=default_admin_keyboard)
         else:
-            self.send_msg(to_user=user_id, keyboard=default_keyboard)
+            if message:
+                self.send_msg(to_user=to_user, message=message, keyboard=default_keyboard)
+            else:
+                self.send_msg(to_user=to_user, keyboard=default_keyboard)
 
     def initialize_buy_certificate(self, user_id):
         self.send_msg(to_user=user_id, message=certificate_select_value, keyboard=buy_certificate_keyboard)
 
     def initialize_user_registration(self, user_id):
         self.waitlist.add_user_to_waitlist(user_id, "reg")
-        self.send_msg(to_user=user_id, message=registration_message)
+        # self.send_msg(to_user=user_id, message=registration_message)
+        self.send_default_keyboard(to_user=user_id, message=registration_message)
 
     def initialize_get_bonus_balance(self, user_id):
         self.waitlist.add_user_to_waitlist(user_id, "phone")
-        self.send_msg(to_user=user_id, message=get_balance_message)
+        # self.send_msg(to_user=user_id, message=get_balance_message)
+        self.send_default_keyboard(to_user=user_id, message=get_balance_message)
 
     def initialize_ask_manager(self, user_id):
         self.waitlist.add_user_to_waitlist(user_id, "ask")
-        self.send_msg(to_user=user_id, message=ask_manager_message)
+        # self.send_msg(to_user=user_id, message=ask_manager_message)
+        self.send_default_keyboard(to_user=user_id, message=ask_manager_message)
 
     def process_buy_certificate(self, user_id, text, cert_price):
         self.waitlist.add_user_to_waitlist(user_id, "email", text)
@@ -81,15 +95,17 @@ class Bot:
 
     def process_ask_manager(self, user_id, text):
         name = " ".join(self.get_first_name_last_name(user_id))
-        msg = to_admin_customer_question.format(name, user_id, text)
-        self.send_msg(to_user=self.admin.manager, message=msg)
-        self.send_msg(to_user=user_id, message=ask_manager_confirmation)
+        msg_to_manager = to_admin_customer_question.format(name, user_id, text)
+        self.send_msg(to_user=self.admin.manager, message=msg_to_manager)
+        # self.send_msg(to_user=user_id, message=ask_manager_confirmation)
+        self.send_default_keyboard(to_user=user_id, message=ask_manager_confirmation)
 
     def process_user_registration(self, user_id, text):
         name = " ".join(self.get_first_name_last_name(user_id))
-        msg = to_admin_customer_registration.format(name, user_id, text)
-        self.send_msg(to_user=self.admin.manager, message=msg)
-        self.send_msg(to_user=user_id, message=registration_confirmation)
+        msg_to_manager = to_admin_customer_registration.format(name, user_id, text)
+        self.send_msg(to_user=self.admin.manager, message=msg_to_manager)
+        # self.send_msg(to_user=user_id, message=registration_confirmation)
+        self.send_default_keyboard(to_user=user_id, message=registration_confirmation)
 
     def process_get_bonus_balance(self, user_id, text):
         result, error = self.database.get_balance_by_phone(text)
@@ -97,15 +113,24 @@ class Bot:
         if error and user_id not in self.admin.admin_list:
             self.send_msg(to_user=self.admin.manager,
                           message=f"Ошибка поиска номера {text} в базе данных. Ответ на запрос: {response}")
-        self.send_msg(to_user=user_id, message=response)
+        # self.send_msg(to_user=user_id, message=response)
+        self.send_default_keyboard(to_user=user_id, message=response)
 
     def process_cheque(self, user_id, text, message):
         name = " ".join(self.get_first_name_last_name(user_id))
         tmp = to_admin_buy_certificate.format(name, user_id, self.waitlist.get_user_data(user_id, "email"),
                                               self.waitlist.get_user_data(user_id, "cheque"), text)
         self.send_msg(to_user=self.admin.manager, message=tmp, attachments=get_attachments_links(message.attachments))
-        self.send_msg(to_user=user_id, message=certificate_after_payment)
-        self.send_default_keyboard(user_id)
+        # self.send_msg(to_user=user_id, message=certificate_after_payment)
+        # self.send_default_keyboard(user_id)
+        self.send_default_keyboard(to_user=user_id, message=certificate_after_payment)
+
+    def process_contest(self, user_id):
+        if not contest_running:
+            self.send_default_keyboard(to_user=user_id, message=text_contest_closed)
+            return
+        response = self.contest.add_participant(user_id)
+        self.send_default_keyboard(to_user=user_id, message=response)
 
     def process_attachments(self, user_id, text, message):
         name = " ".join(self.get_first_name_last_name(user_id))
@@ -163,8 +188,8 @@ class Bot:
                     else:
                         self.process_attachments(user_id, text, message)
                         self.send_msg(to_user=user_id, keyboard=default_admin_keyboard)
-            else:
-                self.send_default_keyboard(user_id)
+            # else:
+            #     self.send_default_keyboard(user_id)
 
         self.waitlist.user_waitlist_reset(user_id)
 
@@ -233,7 +258,6 @@ class Bot:
             self.payload_back_button(user_id, command)
         elif admin_command := payload.get("admin"):
             self.payload_admin(user_id, admin_command)
-
         else:   # Если пришёл странный payload (например, могла устареть клавиатура при обновлении, либо ручной запрос)
             self.send_default_keyboard(user_id)
 
