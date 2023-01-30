@@ -4,7 +4,7 @@ from settings.config import token, group_id
 
 bot = Bot(token, group_id)
 
-bot.start()
+# bot.start()
 
 while True:
     try:

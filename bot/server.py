@@ -24,7 +24,10 @@ class Bot:
         self.admin = Admin()
         self.database = Database()
         if contest_running:
-            self.contest = Contest()
+            try:
+                self.contest = Contest()
+            except BaseException as e:
+                exit(f"Ошибка во время чтения файла участников конкурса. Удалите его перед запуском бота.\n{e}")
         resp_flag, resp_text = self.database.init_table(first_load=True)
         if resp_flag is False:
             print("База данных не была инициализирована")
