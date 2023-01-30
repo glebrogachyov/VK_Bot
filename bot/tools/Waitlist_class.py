@@ -1,23 +1,26 @@
 from typing import Literal
 import pickle
 import os
+
 allowed_values = Literal["email", "phone", "reg", "ask", "cheque", "admin_new_db"]
-pkl_path = {"email": "email.pkl",
-            "phone": "phone_number.pkl",
-            "reg": "register_info.pkl",
-            "ask": "ask_manager.pkl",
-            "cheque": "cheque.pkl",
-            "admin_new_db": "new_db.pkl"}
+
+pkl_folder = "storage/pickles/"
+pkl_filename = {"email": "email.pkl",
+                "phone": "phone_number.pkl",
+                "reg": "register_info.pkl",
+                "ask": "ask_manager.pkl",
+                "cheque": "cheque.pkl",
+                "admin_new_db": "new_db.pkl"}
 
 
 class WaitList:
     def __init__(self):
-        self.email = unpickle(pkl_path["email"])
-        self.phone_number = unpickle(pkl_path["phone"])
-        self.register_info = unpickle(pkl_path["reg"])
-        self.ask_manager = unpickle(pkl_path["ask"])
-        self.cheque = unpickle(pkl_path["cheque"])
-        self.new_db = unpickle(pkl_path["admin_new_db"])
+        self.email = unpickle(pkl_filename["email"])
+        self.phone_number = unpickle(pkl_filename["phone"])
+        self.register_info = unpickle(pkl_filename["reg"])
+        self.ask_manager = unpickle(pkl_filename["ask"])
+        self.cheque = unpickle(pkl_filename["cheque"])
+        self.new_db = unpickle(pkl_filename["admin_new_db"])
         self.aliases = {"email": self.email,
                         "phone": self.phone_number,
                         "reg": self.register_info,
@@ -28,14 +31,14 @@ class WaitList:
 
     def add_user_to_waitlist(self, user_id, list_alias: allowed_values, val=True):
         self.aliases[list_alias][user_id] = val
-        with open("tmp_files/pickles/" + pkl_path[list_alias], "wb") as file:
+        with open(pkl_folder + pkl_filename[list_alias], "wb") as file:
             pickle.dump(self.aliases[list_alias], file)
 
     def user_waitlist_reset(self, user_id):
         for list_alias, waitlist in self.aliases.items():
             if user_id in waitlist:
                 waitlist.pop(user_id)
-                with open("tmp_files/pickles/" + pkl_path[list_alias], "wb") as file:
+                with open(pkl_folder + pkl_filename[list_alias], "wb") as file:
                     pickle.dump(self.aliases[list_alias], file)
 
     def get_user_data(self, user_id, list_alias: allowed_values):
@@ -47,7 +50,7 @@ class WaitList:
 
 
 def unpickle(filename):
-    if filename in os.listdir("tmp_files/pickles"):
-        with open("tmp_files/pickles/"+filename, "rb") as file:
+    if filename in os.listdir(pkl_folder):
+        with open(pkl_folder+filename, "rb") as file:
             return pickle.load(file)
     return dict()

@@ -1,5 +1,5 @@
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
-from settings.config import link_one, link_two, link_buy_cert, contest_running
+from storage.settings.config import link_one, link_two, link_buy_cert, contest_running
 
 
 def default_keyboard_constructor(keyboard):

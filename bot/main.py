@@ -1,6 +1,6 @@
 from server import Bot
 import requests
-from settings.config import token, group_id
+from storage.settings.config import token, group_id
 
 bot = Bot(token, group_id)
 

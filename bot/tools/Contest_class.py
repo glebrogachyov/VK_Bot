@@ -1,14 +1,17 @@
 import os
 import pandas as pd
 
-from settings.messages import contest_already_in_list, contest_added_to_list
+from storage.settings.messages import contest_already_in_list, contest_added_to_list
+
+contest_folder = "storage/contest/"
+contest_filename = "contest_participants.csv"
 
 
 class Contest:
     def __init__(self):
-        if "contest_participants.csv" in os.listdir("tmp_files/contest"):
+        if contest_filename in os.listdir(contest_folder):
             print("Прочитан файл участников конкурса")
-            self.participants = pd.read_csv("tmp_files/contest/contest_participants.csv", dtype=int)
+            self.participants = pd.read_csv(contest_folder + contest_filename, dtype=int)
         else:
             print("Создана таблица участников конкурса")
             self.participants = pd.Series(name="user id", dtype=int)
@@ -18,5 +21,5 @@ class Contest:
             return contest_already_in_list
         else:
             self.participants.loc[len(self.participants)] = user_id
-            self.participants.to_csv("tmp_files/contest/contest_participants.csv", index=False)
+            self.participants.to_csv(contest_folder + contest_filename, index=False)
             return contest_added_to_list

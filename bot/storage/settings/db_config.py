@@ -1,5 +1,7 @@
-excel_file_path = "tmp_files/data/db.xlsx"
-tmp_file_path = "tmp_files/data/tmp.xlsx"
+data_folder = "storage/data/"
+
+excel_filename = "db.xlsx"
+tmp_filename = "tmp.xlsx"
 
 ''' Лист в таблице, по умолчанию должен быть такой'''
 excel_sheet_name = "Лист1"

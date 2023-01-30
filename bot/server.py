@@ -2,9 +2,9 @@ import vk_api
 from vk_api.bot_longpoll import VkBotLongPoll
 from vk_api.utils import get_random_id
 
-from settings.keyboards import *
-from settings.messages import *
-from settings.config import contest_running
+from storage.settings.keyboards import *
+from storage.settings.messages import *
+from storage.settings.config import contest_running
 
 from tools.functions import get_attachments_links
 from tools.Admin_class import Admin

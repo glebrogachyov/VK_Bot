@@ -2,8 +2,9 @@ import pandas as pd
 import os
 import re
 import requests
-from settings.db_config import *
-from settings.messages import balance_found, balance_not_found, multiple_balance_found, too_many_balances
+
+from storage.settings.db_config import *
+from storage.settings.messages import balance_found, balance_not_found, multiple_balance_found, too_many_balances
 
 
 class Database:
@@ -12,7 +13,7 @@ class Database:
         self.tmp_table = None
         self.database: pd.DataFrame = pd.DataFrame({"phone": [None], "balance": [None]})
 
-    def init_table(self, db_path=excel_file_path, first_load=False):
+    def init_table(self, db_path=data_folder + excel_filename, first_load=False):
         try:
             self.tmp_table = pd.read_excel(io=db_path,
                                            header=None,
@@ -40,15 +41,15 @@ class Database:
         # Блок инициализации новой таблицы - если её получится прочитать, то она будет сохранена как временная
         try:
             tmp_file = requests.get(doc_url)
-            open(tmp_file_path, "wb").write(tmp_file.content)
-            resp_flag, resp_text = self.init_table(tmp_file_path)
+            open(data_folder + tmp_filename, "wb").write(tmp_file.content)
+            resp_flag, resp_text = self.init_table(data_folder + tmp_filename)
         except OSError as e:
             return False, f"Ошибка обновления таблицы:\n{e}"
         except Exception as e:
             return False, f"Ошибка обновления таблицы:\n{e}"
 
         if resp_flag is False:
-            os.remove(tmp_file_path)  # удаляем старую таблицу
+            os.remove(data_folder + tmp_filename)  # удаляем старую таблицу
             return resp_flag, resp_text
 
         # Блок тестовых запросов к новой таблице - если они не выпадут с ошибкой, тогда вряд ли она вообще упадёт
@@ -64,11 +65,11 @@ class Database:
         # Если на предыдущих этапах таблица не упала, тогда удаляем старую. Иначе удаляем новую и ничего не меняем
         if resp_flag:
             self.database, self.tmp_table = self.tmp_table, None
-            if "db.xlsx" in os.listdir("tmp_files/data"):
-                os.remove(excel_file_path)  # удаляем старую таблицу
-            os.rename(tmp_file_path, excel_file_path)  # переименовываем файл новой таблицы, делая его основным
+            if excel_filename in os.listdir(data_folder):
+                os.remove(data_folder + excel_filename)
+            os.rename(data_folder + tmp_filename, data_folder + excel_filename)
         else:
-            os.remove(tmp_file_path)  # удаляем новую таблицу
+            os.remove(data_folder + tmp_filename)  # удаляем новую таблицу
         return resp_flag, resp_text
 
     def normalize_phone(self, phone_number: str) -> str:
