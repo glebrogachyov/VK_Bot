@@ -30,7 +30,7 @@ class Bot:
                 exit(f"Ошибка во время чтения файла участников конкурса. Удалите его перед запуском бота.\n{e}")
         resp_flag, resp_text = self.database.init_table(first_load=True)
         if resp_flag is False:
-            print("База данных не была инициализирована")
+            print("База номеров и балансов отсутствует.")
         self.menu_functions = {'buy_cert': self.initialize_buy_certificate,
                                'reg_bonus': self.initialize_user_registration,
                                'get_balance': self.initialize_get_bonus_balance,
