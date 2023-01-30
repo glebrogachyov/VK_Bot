@@ -253,5 +253,5 @@ class Bot:
     def start(self):
         for event in self.long_poll.listen():
             self.controller(event)
-            print("-------")
-            self.waitlist.printer()
+            # print("-------")
+            # self.waitlist.printer()

@@ -14,6 +14,6 @@ while True:
     except Exception as e:
         print("Bot stopped.\nError: ", e)
         continue
-    # except BaseException as be:
-    #     print("Bot stopped on BaseException.\nError: ", be)
-    #     continue
+    except BaseException as be:
+        print("Bot stopped on BaseException.\nError: ", be)
+        continue
