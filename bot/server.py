@@ -192,8 +192,7 @@ class Bot:
         elif self.waitlist.get_user_data(user_id, "phone"):
             self.process_get_bonus_balance(user_id, text)
 
-        # Если пользователь просто так что-то написал, то высылаем дефолтную клавиатуру
-        # А если что-то прикрепил к сообщению, тогда пересылаем администратору
+        # Если пользователь что-то прикрепил к сообщению, тогда пересылаем администратору
         else:
             if message.attachments:
                 if user_id not in self.admin.admin_list:
@@ -206,8 +205,6 @@ class Bot:
                     else:
                         self.process_attachments(user_id, text, message)
                         self.send_msg(to_user=user_id, keyboard=default_admin_keyboard)
-            # else:
-            #     self.send_default_keyboard(user_id)
 
         self.waitlist.user_waitlist_reset(user_id)
 
