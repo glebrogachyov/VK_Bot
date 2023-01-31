@@ -14,11 +14,9 @@ class Contest:
     def __init__(self):
         # if contest_filename in os.listdir(contest_folder):
         if path.isfile(filepath) and path.getsize(filepath) > 0:
-            # print("Прочитан файл участников конкурса")
             logger.info("Прочитан файл участников конкурса")
             self.participants = pd.read_csv(filepath, dtype=int)
         else:
-            # print("Создана таблица участников конкурса")
             logger.info("Создана таблица участников конкурса")
             self.participants = pd.Series(name="user id", dtype=int)
 
