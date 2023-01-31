@@ -20,7 +20,8 @@ from tools.Contest_class import Contest
 
 logger.remove(0)
 logger.add(stdout, format="{time} {level} {message}", level="INFO")
-logger.add("storage/log/bot_log.log", format="{time} {level} {message}", level="DEBUG", rotation="3 hours")
+logger.add("storage/log/bot_log.log", format="{time} {level} {message}",
+           level="DEBUG", rotation="06:00", retention="3 days")
 
 
 class Bot:
