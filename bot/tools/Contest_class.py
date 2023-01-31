@@ -3,6 +3,8 @@ import pandas as pd
 
 from storage.settings.messages import contest_already_in_list, contest_added_to_list
 
+from server import logger
+
 contest_folder = "storage/contest/"
 contest_filename = "contest_participants.csv"
 filepath = contest_folder + contest_filename
@@ -12,10 +14,12 @@ class Contest:
     def __init__(self):
         # if contest_filename in os.listdir(contest_folder):
         if path.isfile(filepath) and path.getsize(filepath) > 0:
-            print("Прочитан файл участников конкурса")
+            # print("Прочитан файл участников конкурса")
+            logger.info("Прочитан файл участников конкурса")
             self.participants = pd.read_csv(filepath, dtype=int)
         else:
-            print("Создана таблица участников конкурса")
+            # print("Создана таблица участников конкурса")
+            logger.info("Создана таблица участников конкурса")
             self.participants = pd.Series(name="user id", dtype=int)
 
     def add_participant(self, user_id):

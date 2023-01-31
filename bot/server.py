@@ -2,26 +2,25 @@ import vk_api
 from vk_api.bot_longpoll import VkBotLongPoll
 from vk_api.utils import get_random_id
 
-from loguru import logger
-from sys import stdout
-
 import json
 
 from storage.settings.keyboards import *
 from storage.settings.messages import *
 from storage.settings.config import contest_running
 
-from tools.functions import get_attachments_links
 from tools.Admin_class import Admin
 from tools.Database_class import Database
 from tools.Waitlist_class import WaitList
-from tools.Contest_class import Contest
 
+from loguru import logger
+from sys import stdout
 
 logger.remove(0)
 logger.add(stdout, format="{time} {level} {message}", level="INFO")
 logger.add("storage/log/bot_log.log", format="{time} {level} {message}",
            level="DEBUG", rotation="06:00", retention="3 days")
+
+from tools.Contest_class import Contest
 
 
 class Bot:
@@ -36,16 +35,35 @@ class Bot:
             try:
                 self.contest = Contest()
             except BaseException as e:
-                exit(f"Ошибка во время чтения файла участников конкурса. Удалите его перед запуском бота.\n{e}")
+                exit_text = f"Ошибка чтения 'contest_participants.csv'. Удалите его перед запуском бота.\n{repr(e)}"
+                logger.error(exit_text)
+                exit(exit_text)
         resp_flag, resp_text = self.database.init_table(first_load=True)
         if resp_flag is False:
-            print("База номеров и балансов отсутствует.")
+            logger.info("База номеров и балансов отсутствует. Отправьте её в сообщении боту.")
         self.menu_functions = {'buy_cert': self.initialize_buy_certificate,
                                'reg_bonus': self.initialize_user_registration,
                                'get_balance': self.initialize_get_bonus_balance,
                                'ask_manager': self.initialize_ask_manager,
                                'contest': self.process_contest
                                }
+
+    @staticmethod
+    def get_attachments_links(attachments):
+        result = []
+        for attachment in attachments:
+            att_type = attachment["type"]
+            att = attachment[att_type]
+            owner_id = att["owner_id"]
+            att_id = att["id"]
+            if att_type == "audio_message":
+                att_type = "audmsg"
+            if att_type in ["photo", "audmsg"]:
+                access_key = att["access_key"]
+                result.append(f"{att_type}{owner_id}_{att_id}_{access_key}")
+            else:
+                result.append(f"{att_type}{owner_id}_{att_id}")
+        return ",".join(result)
 
     def get_first_name_last_name(self, user_id) -> tuple:
         user_info = self.vk_api.users.get(user_ids=user_id)[0]
@@ -81,17 +99,14 @@ class Bot:
 
     def initialize_user_registration(self, user_id):
         self.waitlist.add_user_to_waitlist(user_id, "reg")
-        # self.send_msg(to_user=user_id, message=registration_message)
         self.send_default_keyboard(to_user=user_id, message=registration_message)
 
     def initialize_get_bonus_balance(self, user_id):
         self.waitlist.add_user_to_waitlist(user_id, "phone")
-        # self.send_msg(to_user=user_id, message=get_balance_message)
         self.send_default_keyboard(to_user=user_id, message=get_balance_message)
 
     def initialize_ask_manager(self, user_id):
         self.waitlist.add_user_to_waitlist(user_id, "ask")
-        # self.send_msg(to_user=user_id, message=ask_manager_message)
         self.send_default_keyboard(to_user=user_id, message=ask_manager_message)
 
     def process_buy_certificate(self, user_id, text, cert_price):
@@ -109,14 +124,12 @@ class Bot:
         name = " ".join(self.get_first_name_last_name(user_id))
         msg_to_manager = to_admin_customer_question.format(name, user_id, text)
         self.send_msg(to_user=self.admin.manager, message=msg_to_manager)
-        # self.send_msg(to_user=user_id, message=ask_manager_confirmation)
         self.send_default_keyboard(to_user=user_id, message=ask_manager_confirmation)
 
     def process_user_registration(self, user_id, text):
         name = " ".join(self.get_first_name_last_name(user_id))
         msg_to_manager = to_admin_customer_registration.format(name, user_id, text)
         self.send_msg(to_user=self.admin.manager, message=msg_to_manager)
-        # self.send_msg(to_user=user_id, message=registration_confirmation)
         self.send_default_keyboard(to_user=user_id, message=registration_confirmation)
 
     def process_get_bonus_balance(self, user_id, text):
@@ -125,16 +138,14 @@ class Bot:
         if error and user_id not in self.admin.admin_list:
             self.send_msg(to_user=self.admin.manager,
                           message=f"Ошибка поиска номера {text} в базе данных. Ответ на запрос: {response}")
-        # self.send_msg(to_user=user_id, message=response)
         self.send_default_keyboard(to_user=user_id, message=response)
 
     def process_cheque(self, user_id, text, message):
         name = " ".join(self.get_first_name_last_name(user_id))
         tmp = to_admin_buy_certificate.format(name, user_id, self.waitlist.get_user_data(user_id, "email"),
                                               self.waitlist.get_user_data(user_id, "cheque"), text)
-        self.send_msg(to_user=self.admin.manager, message=tmp, attachments=get_attachments_links(message.attachments))
-        # self.send_msg(to_user=user_id, message=certificate_after_payment)
-        # self.send_default_keyboard(user_id)
+        self.send_msg(to_user=self.admin.manager, message=tmp,
+                      attachments=self.get_attachments_links(message.attachments))
         self.send_default_keyboard(to_user=user_id, message=certificate_after_payment)
 
     def process_contest(self, user_id):
@@ -147,7 +158,8 @@ class Bot:
     def process_attachments(self, user_id, text, message):
         name = " ".join(self.get_first_name_last_name(user_id))
         tmp = to_admin_photo_attachment.format(name, user_id, text)
-        self.send_msg(to_user=self.admin.manager, message=tmp, attachments=get_attachments_links(message.attachments))
+        self.send_msg(to_user=self.admin.manager, message=tmp,
+                      attachments=self.get_attachments_links(message.attachments))
 
     def process_new_db(self, user_id, message):
         for attachment in message.attachments:
@@ -270,7 +282,7 @@ class Bot:
             self.payload_back_button(user_id, command)
         elif admin_command := payload.get("admin"):
             self.payload_admin(user_id, admin_command)
-        else:   # Если пришёл странный payload (например, могла устареть клавиатура при обновлении, либо ручной запрос)
+        else:  # Если пришёл странный payload (например, могла устареть клавиатура при обновлении, либо ручной запрос)
             self.send_default_keyboard(user_id)
 
     def controller(self, event):
