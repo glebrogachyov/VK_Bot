@@ -8,9 +8,9 @@ from storage.settings.keyboards import *
 from storage.settings.messages import *
 from storage.settings.config import contest_running
 
-from tools.Admin_class import Admin
-from tools.Database_class import Database
-from tools.Waitlist_class import WaitList
+from services.Admin_class import Admin
+from services.Database_class import Database
+from services.Waitlist_class import WaitList
 
 from loguru import logger
 from sys import stdout
@@ -20,7 +20,7 @@ logger.add(stdout, format="{time} {level} {message}", level="INFO")
 logger.add("storage/log/bot_log.log", format="{time} {level} {message}",
            level="DEBUG", rotation="06:00", retention="3 days")
 
-from tools.Contest_class import Contest
+from services.Contest_class import Contest
 
 
 class Bot:
@@ -41,12 +41,6 @@ class Bot:
         resp_flag, resp_text = self.database.init_table(first_load=True)
         if resp_flag is False:
             logger.info("База номеров и балансов отсутствует. Отправьте её в сообщении боту.")
-        self.menu_functions = {'buy_cert': self.initialize_buy_certificate,
-                               'reg_bonus': self.initialize_user_registration,
-                               'get_balance': self.initialize_get_bonus_balance,
-                               'ask_manager': self.initialize_ask_manager,
-                               'contest': self.process_contest
-                               }
 
     @staticmethod
     def get_attachments_links(attachments):
@@ -220,8 +214,18 @@ class Bot:
     # Обработчик кнопок главного меню
     def payload_menu(self, user_id, option):
         self.waitlist.user_waitlist_reset(user_id)
-        handler = self.menu_functions.get(option)
-        handler(user_id)
+        if option == "buy_cert":
+            self.initialize_buy_certificate(user_id)
+        elif option == "reg_bonus":
+            self.initialize_user_registration(user_id)
+        elif option == "get_balance":
+            self.initialize_get_bonus_balance(user_id)
+        elif option == "ask_manager":
+            self.initialize_ask_manager(user_id)
+        elif option == "contest":
+            self.process_contest(user_id)
+        else:
+            self.send_default_keyboard(user_id)
 
     # Обработчик кнопок покупки сертификата
     def payload_buy_certificate(self, user_id, price):
