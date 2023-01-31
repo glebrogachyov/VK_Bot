@@ -2,6 +2,11 @@ import vk_api
 from vk_api.bot_longpoll import VkBotLongPoll
 from vk_api.utils import get_random_id
 
+from loguru import logger
+from sys import stdout
+
+import json
+
 from storage.settings.keyboards import *
 from storage.settings.messages import *
 from storage.settings.config import contest_running
@@ -12,7 +17,10 @@ from tools.Database_class import Database
 from tools.Waitlist_class import WaitList
 from tools.Contest_class import Contest
 
-import json
+
+logger.remove(0)
+logger.add(stdout, format="{time} {level} {message}", level="INFO")
+logger.add("storage/log/bot_log.log", format="{time} {level} {message}", level="DEBUG", rotation="3 hours")
 
 
 class Bot:
@@ -280,5 +288,7 @@ class Bot:
     def start(self):
         for event in self.long_poll.listen():
             self.controller(event)
-            # print("-------")
-            # self.waitlist.printer()
+            logger.debug(f"from: {event.message.from_id} | "
+                         f"text: {event.message.text} | "
+                         f"payload: {event.message.payload} | "
+                         f"attached:{[att['type'] for att in event.message.attachments]}")
