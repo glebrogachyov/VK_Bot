@@ -65,8 +65,10 @@ buy_certificate_keyboard.add_button(label="Назад", color=VkKeyboardColor.NE
 
 def pay_link_keyboard(certificate_amount):
     keyboard = VkKeyboard()
-    keyboard.add_openlink_button(label="Оплатить", link=link_buy_cert[certificate_amount])
-    keyboard.add_line()
+    pay_link = link_buy_cert.get(certificate_amount)
+    if pay_link:
+        keyboard.add_openlink_button(label="Оплатить", link=link_buy_cert[certificate_amount])
+        keyboard.add_line()
     keyboard.add_button(label="Отмена", color=VkKeyboardColor.NEGATIVE, payload={"back": "to_cert"})
     return keyboard
 
