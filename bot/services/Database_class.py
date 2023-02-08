@@ -17,7 +17,6 @@ class Database:
         try:
             self.tmp_table = pd.read_excel(io=db_path,
                                            header=None,
-                                           sheet_name=excel_sheet_name,
                                            skiprows=excel_first_useful_row-1,
                                            usecols=excel_useful_columns,
                                            names=["phone", "balance"],
