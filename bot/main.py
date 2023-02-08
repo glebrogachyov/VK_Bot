@@ -3,13 +3,12 @@ import requests
 import time
 from storage.settings.config import token, group_id
 
-bot = Bot(token, group_id)
-
 
 @logger.catch
 def main():
     while True:
         try:
+            bot = Bot(token, group_id)
             logger.info("Bot starting...")
             bot.start()
         except requests.exceptions.RequestException:
