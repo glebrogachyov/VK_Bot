@@ -12,16 +12,16 @@ def main():
             logger.info("Запуск бота")
             bot.start()
         except requests.exceptions.RequestException:
-            logger.error("Бот остановлен. e: ConnectionError")
+            logger.error("Бот остановлен. err: ConnectionError")
             time.sleep(1)
             continue
         except Exception as e:
             time.sleep(1)
-            logger.error("Бот остановлен. e: " + repr(e))
+            logger.error("Бот остановлен. err: " + repr(e))
             continue
         except BaseException as be:
             time.sleep(1)
-            logger.error("Бот остановлен. be: " + repr(be))
+            logger.error("Бот остановлен. err be: " + repr(be))
             continue
 
 
