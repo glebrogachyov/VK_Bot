@@ -12,7 +12,7 @@ excel_sheet_name = "Лист1"
 excel_first_useful_row = 10
 
 ''' Названия столбцов с номерами телефонов и балансами:'''
-excel_useful_columns = "A, E"
+excel_useful_columns = "A, D"
 
 
 ''' Номера телефонов для проверки загруженной в бота таблицы '''
