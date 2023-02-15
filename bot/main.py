@@ -1,4 +1,5 @@
-from server import Bot, logger
+from server import Bot
+from services.logger import logger
 import requests
 import time
 from storage.settings.config import token, group_id

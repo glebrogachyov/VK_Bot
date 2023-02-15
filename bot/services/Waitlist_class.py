@@ -2,15 +2,14 @@ from typing import Literal
 import pickle
 import os
 
-allowed_values = Literal["email", "phone", "reg", "ask", "cheque", "admin_new_db"]
+allowed_values = Literal["email", "phone", "reg", "ask", "cheque"]
 
 pkl_folder = "storage/pickles/"
 pkl_filename = {"email": "email.pkl",
                 "phone": "phone_number.pkl",
                 "reg": "register_info.pkl",
                 "ask": "ask_manager.pkl",
-                "cheque": "cheque.pkl",
-                "admin_new_db": "new_db.pkl"}
+                "cheque": "cheque.pkl"}
 
 
 class WaitList:
@@ -20,14 +19,11 @@ class WaitList:
         self.register_info = unpickle(pkl_filename["reg"])
         self.ask_manager = unpickle(pkl_filename["ask"])
         self.cheque = unpickle(pkl_filename["cheque"])
-        self.new_db = unpickle(pkl_filename["admin_new_db"])
         self.aliases = {"email": self.email,
                         "phone": self.phone_number,
                         "reg": self.register_info,
                         "ask": self.ask_manager,
-                        "cheque": self.cheque,
-                        "admin_new_db": self.new_db}
-        # self.printer()
+                        "cheque": self.cheque}
 
     def add_user_to_waitlist(self, user_id, list_alias: allowed_values, val=True):
         self.aliases[list_alias][user_id] = val
@@ -47,6 +43,7 @@ class WaitList:
     def printer(self):
         for alias in self.aliases:
             print(f"{alias: <7}: {self.aliases[alias]}")
+        print()
 
 
 def unpickle(filename):

@@ -11,16 +11,9 @@ from storage.settings.config import contest_running
 from services.Admin_class import Admin
 from services.Database_class import Database
 from services.Waitlist_class import WaitList
-
-from loguru import logger
-from sys import stdout
-
-logger.remove(0)
-logger.add(stdout, format="{time} {level} {message}", level="INFO")
-logger.add("storage/log/bot_log.log", format="{time} {level} {message}",
-           level="DEBUG", rotation="06:00", retention="3 days")
-
 from services.Contest_class import Contest
+
+from services.logger import logger
 
 
 class Bot:
@@ -41,12 +34,14 @@ class Bot:
         resp_flag, resp_text = self.database.init_table(first_load=True)
         if resp_flag is False:
             logger.info("База номеров и балансов отсутствует. Отправьте её в сообщении боту.")
+        else:
+            logger.info("База номеров и балансов прочитана успешно.")
 
     @staticmethod
     def get_attachments_links(attachments):
         result = []
         for attachment in attachments:
-            att_type = attachment["type"]
+            att_type = attachment["type"]   # !Если тип - фото, то прикрепить, + выслать отдельным кортежем тип для всех
             att = attachment[att_type]
             owner_id = att["owner_id"]
             att_id = att["id"]
@@ -155,23 +150,6 @@ class Bot:
         self.send_msg(to_user=self.admin.manager, message=tmp,
                       attachments=self.get_attachments_links(message.attachments))
 
-    def process_new_db(self, user_id, message):
-        for attachment in message.attachments:
-            if attachment["type"] == "doc" and attachment["doc"]["ext"] == "xlsx":
-                self.send_msg(to_user=user_id, message="Файл получен.", keyboard=default_admin_keyboard)
-                self.waitlist.user_waitlist_reset(user_id)
-                resp_flag, resp_text = self.database.update_table(attachment["doc"]["url"])
-                if user_id != self.admin.manager:
-                    self.send_msg(to_user=user_id, message=resp_text)
-                self.send_msg(to_user=self.admin.manager, message=resp_text)
-                break
-        else:
-            tmp = "В сообщении отсутствует документ .xlsx. Повторите ещё раз."
-            self.waitlist.user_waitlist_reset(user_id)
-            self.send_msg(to_user=user_id, message=tmp, keyboard=default_admin_keyboard)
-            if user_id != self.admin.manager:
-                self.send_msg(to_user=self.admin.manager, message=tmp)
-
     # Менеджер сообщений, которые пользователь написал сам, а не сгенерировал нажатием кнопки
     def controller_text(self, user_id, text, message):
 
@@ -195,16 +173,8 @@ class Bot:
         # Если пользователь что-то прикрепил к сообщению, тогда пересылаем администратору
         else:
             if message.attachments:
-                if user_id not in self.admin.admin_list:
-                    self.process_attachments(user_id, text, message)
-                    self.send_default_keyboard(user_id)
-                else:
-                    if self.waitlist.get_user_data(user_id, "admin_new_db"):
-                        self.process_new_db(user_id, message)
-                        return
-                    else:
-                        self.process_attachments(user_id, text, message)
-                        self.send_msg(to_user=user_id, keyboard=default_admin_keyboard)
+                self.process_attachments(user_id, text, message)
+                self.send_default_keyboard(user_id)
 
         self.waitlist.user_waitlist_reset(user_id)
 
@@ -253,8 +223,11 @@ class Bot:
             self.send_msg(user_id, message="Панель администратора:", keyboard=admin_menu_keyboard)
 
         elif command == "new_database":
-            self.send_msg(to_user=user_id, message="Отправьте .xlsx файл в ответном сообщении.")
-            self.waitlist.add_user_to_waitlist(user_id, "admin_new_db")
+            self.send_msg(to_user=user_id, message="Запущена процедура обновления таблицы.")
+            resp_flag, resp_text = self.database.update_table()
+            if user_id != self.admin.manager:
+                self.send_msg(to_user=user_id, message=resp_text)
+            self.send_msg(to_user=self.admin.manager, message=resp_text)
 
         elif command == "set_manager":
             admin_names = [self.get_first_name_last_name(admin) for admin in self.admin.admin_list]

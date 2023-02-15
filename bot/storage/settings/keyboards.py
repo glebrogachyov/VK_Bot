@@ -90,7 +90,7 @@ back_keyboard.add_button(label="Главное меню", color=VkKeyboardColor.
 
 admin_menu_keyboard = VkKeyboard(one_time=False)
 
-admin_menu_keyboard.add_button(label="Обновить базу данных",
+admin_menu_keyboard.add_button(label="Перезагрузить базу данных",
                                color=VkKeyboardColor.PRIMARY,
                                payload={"admin": "new_database"})
 admin_menu_keyboard.add_line()
