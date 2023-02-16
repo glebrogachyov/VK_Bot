@@ -33,26 +33,9 @@ class Bot:
                 exit(exit_text)
         resp_flag, resp_text = self.database.init_table(first_load=True)
         if resp_flag is False:
-            logger.info("База номеров и балансов отсутствует. Отправьте её в сообщении боту.")
+            logger.info(resp_text)
         else:
             logger.info("База номеров и балансов прочитана успешно.")
-
-    @staticmethod
-    def get_attachments_links(attachments):
-        result = []
-        for attachment in attachments:
-            att_type = attachment["type"]   # !Если тип - фото, то прикрепить, + выслать отдельным кортежем тип для всех
-            att = attachment[att_type]
-            owner_id = att["owner_id"]
-            att_id = att["id"]
-            if att_type == "audio_message":
-                att_type = "audmsg"
-            if att_type in ["photo", "audmsg"]:
-                access_key = att["access_key"]
-                result.append(f"{att_type}{owner_id}_{att_id}_{access_key}")
-            else:
-                result.append(f"{att_type}{owner_id}_{att_id}")
-        return ",".join(result)
 
     def get_first_name_last_name(self, user_id) -> tuple:
         user_info = self.vk_api.users.get(user_ids=user_id)[0]
@@ -144,11 +127,29 @@ class Bot:
         response = self.contest.add_participant(user_id)
         self.send_default_keyboard(to_user=user_id, message=response)
 
+    @staticmethod
+    def get_attachments_links(attachments):
+        result = []
+        attachments_description = []
+        photo_links = None
+        for attachment in attachments:
+            att_type = attachment["type"]
+            if att_type == "photo":                                             # Если тип - фото, тогда прикрепляем
+                att = attachment[att_type]
+                access_key = att["access_key"]
+                owner_id = att["owner_id"]
+                att_id = att["id"]
+                result.append(f"{att_type}{owner_id}_{att_id}_{access_key}")
+            photo_links = ",".join(result)
+            attachments_description.append(att_type)                            # И формируем список типов всех вложений
+        attachments_description = ", ".join(attachments_description)
+        return photo_links, attachments_description
+
     def process_attachments(self, user_id, text, message):
         name = " ".join(self.get_first_name_last_name(user_id))
-        tmp = to_admin_photo_attachment.format(name, user_id, text)
-        self.send_msg(to_user=self.admin.manager, message=tmp,
-                      attachments=self.get_attachments_links(message.attachments))
+        photo_links, attachments_description = self.get_attachments_links(message.attachments)
+        tmp = to_admin_photo_attachment.format(name, user_id, text, attachments_description)
+        self.send_msg(to_user=self.admin.manager, message=tmp, attachments=photo_links)
 
     # Менеджер сообщений, которые пользователь написал сам, а не сгенерировал нажатием кнопки
     def controller_text(self, user_id, text, message):
@@ -174,7 +175,6 @@ class Bot:
         else:
             if message.attachments:
                 self.process_attachments(user_id, text, message)
-                self.send_default_keyboard(user_id)
 
         self.waitlist.user_waitlist_reset(user_id)
 

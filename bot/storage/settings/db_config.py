@@ -2,11 +2,12 @@ data_folder = "storage/data/"
 # data_folder = "//HOST/share/WIN10-DOCKER/_Docker_shared_folder/"  # Проверить как работает этот путь к файлу
 # https://stackoverflow.com/questions/7169845/using-python-how-can-i-access-a-shared-folder-on-windows-network       <--
 
-csv_encoding = "ISO-8859-1"
+csv_encoding = "cp1252"
+
 csv_separator = ";"
 
 ''' Номера телефонов для проверки загруженной в бота таблицы '''
-test_phones = ["8+(000)/334-q08 Ж 78", "", "89513492570", "+7 (912) 820-56-71", "79005210686"]
+test_phones = ["text", "89513492570", "+7 (900) 521-06-86"]
 
 """
 Как обрабатываются номера:
