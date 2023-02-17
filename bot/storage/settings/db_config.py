@@ -1,5 +1,5 @@
-data_folder = "storage/data/"
-# data_folder = "//HOST/share/WIN10-DOCKER/_Docker_shared_folder/"  # Проверить как работает этот путь к файлу
+# data_folder = "storage/data/"
+data_folder = "//HOST/share/WIN10-DOCKER/_Docker_shared_folder/"  # Проверить как работает этот путь к файлу
 # https://stackoverflow.com/questions/7169845/using-python-how-can-i-access-a-shared-folder-on-windows-network       <--
 
 csv_encoding = "cp1252"

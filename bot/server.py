@@ -11,11 +11,14 @@ from storage.settings.messages import *
 from storage.settings.config import contest_running
 
 from services.Admin_class import Admin
-from services.Database_class import Database, date_format
+from services.Database_class import Database
 from services.Waitlist_class import WaitList
 from services.Contest_class import Contest
 
 from services.logger import logger
+
+
+date_format = "%d.%m.%Y"
 
 
 class Bot:
