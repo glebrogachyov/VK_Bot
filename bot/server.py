@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 import vk_api
 from vk_api.bot_longpoll import VkBotLongPoll
 from vk_api.utils import get_random_id
@@ -9,7 +11,7 @@ from storage.settings.messages import *
 from storage.settings.config import contest_running
 
 from services.Admin_class import Admin
-from services.Database_class import Database
+from services.Database_class import Database, date_format
 from services.Waitlist_class import WaitList
 from services.Contest_class import Contest
 
@@ -31,7 +33,7 @@ class Bot:
                 exit_text = f"Ошибка чтения 'contest_participants.csv'. Удалите его перед запуском бота.\n{repr(e)}"
                 logger.error(exit_text)
                 exit(exit_text)
-        resp_flag, resp_text = self.database.init_table(first_load=True)
+        resp_flag, resp_text = self.database.init_table()
         if resp_flag is False:
             logger.info(resp_text)
         else:
@@ -224,7 +226,7 @@ class Bot:
 
         elif command == "new_database":
             self.send_msg(to_user=user_id, message="Запущена процедура обновления таблицы.")
-            resp_flag, resp_text = self.database.update_table()
+            resp_text = self.database.init_table(force_update=True)[1]
             if user_id != self.admin.manager:
                 self.send_msg(to_user=user_id, message=resp_text)
             self.send_msg(to_user=self.admin.manager, message=resp_text)
@@ -272,8 +274,23 @@ class Bot:
             payload = json.loads(event.message.payload)
             self.controller_payload(user_id, payload)
 
+    def get_table_up_to_date(self):
+        """ Проверяет, актуальна ли загруженная база данных, если нет - идёт обновлять """
+        file_upload_time = timedelta(hours=1, minutes=1)      # Указываем время, когда новая БД должна появиться в папке
+        # file_upload_time = timedelta(hours=-5, minutes=34, seconds=29)
+        current_date = datetime.utcnow() + timedelta(hours=3)
+        actual_database_time = current_date - file_upload_time
+        actual_database_day = actual_database_time.strftime(date_format)
+        if actual_database_day != self.database.day_created:
+            result = self.database.init_table()
+            if result[0]:
+                logger.info("Автоматически обновлена таблица балансов")
+            else:
+                logger.info("Ошибка автоматического обновления таблицы балансов:", result[1])
+
     def start(self):
         for event in self.long_poll.listen():
+            self.get_table_up_to_date()
             self.controller(event)
             logger.debug(f"from: {event.message.from_id} | "
                          f"text: {event.message.text} | "
