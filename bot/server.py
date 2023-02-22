@@ -9,7 +9,7 @@ import json
 from storage.settings.keyboards import *
 from storage.settings.messages import *
 from storage.settings.config import contest_running
-from storage.settings.db_config import date_format
+from storage.settings.db_config import date_format, timezone_hours
 
 from services.Admin_class import Admin
 from services.Database_class import Database
@@ -17,9 +17,6 @@ from services.Waitlist_class import WaitList
 from services.Contest_class import Contest
 
 from services.logger import logger
-
-
-# date_format = "%d.%m.%Y"
 
 
 class Bot:
@@ -281,8 +278,7 @@ class Bot:
     def get_table_up_to_date(self):
         """ Проверяет, актуальна ли загруженная база данных, если нет - идёт обновлять """
         file_upload_time = timedelta(hours=1, minutes=1)      # Указываем время, когда новая БД должна появиться в папке
-        # file_upload_time = timedelta(hours=-5, minutes=34, seconds=29)
-        current_date = datetime.utcnow() + timedelta(hours=3)
+        current_date = datetime.utcnow() + timedelta(hours=timezone_hours)
         actual_database_time = current_date - file_upload_time
         actual_database_day = actual_database_time.strftime(date_format)
         if actual_database_day != self.database.day_created:
@@ -290,7 +286,7 @@ class Bot:
             if result[0]:
                 logger.info("Автоматически обновлена таблица балансов")
             else:
-                logger.info("Ошибка автоматического обновления таблицы балансов:", result[1])
+                logger.info("Ошибка автоматического обновления таблицы балансов: " + result[1])
 
     def start(self):
         for event in self.long_poll.listen():

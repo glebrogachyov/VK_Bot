@@ -5,6 +5,7 @@ csv_encoding = "cp1252"
 csv_separator = ";"
 
 date_format = "%d.%m.%Y"
+timezone_hours = 3
 
 ''' Номера телефонов для проверки загруженной в бота таблицы '''
 test_phones = ["text", "89513492570", "+7 (900) 521-06-86", "1423"]

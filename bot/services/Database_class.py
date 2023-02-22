@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import pandas as pd
 import re
 
@@ -30,7 +30,8 @@ class Database:
 
             db_path = data_folder + csv_files[-1]
             self.remove_db_files(csv_files[:-2])
-            table_day_created = datetime.date(datetime.fromtimestamp(os.path.getmtime(db_path))).strftime(date_format)
+            file_date = datetime.utcfromtimestamp(os.path.getmtime(db_path)) + timedelta(hours=timezone_hours)
+            table_day_created = datetime.date(file_date).strftime(date_format)
             if table_day_created == self.day_created and not force_update:
                 return False, "В директории не появилось файла новее, чем тот, что был загружен в память"
 
