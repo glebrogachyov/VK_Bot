@@ -9,6 +9,7 @@ import json
 from storage.settings.keyboards import *
 from storage.settings.messages import *
 from storage.settings.config import contest_running
+from storage.settings.db_config import date_format
 
 from services.Admin_class import Admin
 from services.Database_class import Database
@@ -18,7 +19,7 @@ from services.Contest_class import Contest
 from services.logger import logger
 
 
-date_format = "%d.%m.%Y"
+# date_format = "%d.%m.%Y"
 
 
 class Bot:
