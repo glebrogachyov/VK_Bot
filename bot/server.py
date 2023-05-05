@@ -1,20 +1,22 @@
-from datetime import datetime, timedelta
-
 import vk_api
 from vk_api.bot_longpoll import VkBotLongPoll
 from vk_api.utils import get_random_id
+
+from threading import Lock
 
 import json
 
 from storage.settings.keyboards import *
 from storage.settings.messages import *
 from storage.settings.config import contest_running
-from storage.settings.db_config import date_format, timezone_hours
+from storage.settings.time_settings import db_update_hour, db_update_minutes, mailing_hour, mailing_minutes
 
-from services.Admin_class import Admin
-from services.Database_class import Database
-from services.Waitlist_class import WaitList
-from services.Contest_class import Contest
+from services.admin_class import Admin
+from services.database_class import Database
+from services.waitlist_class import WaitList
+from services.contest_class import Contest
+from services.mailer_class import Mailer
+from services.daemons import DailyTaskDaemon
 
 from services.logger import logger
 
@@ -26,7 +28,9 @@ class Bot:
         self.vk_api = self.vk.get_api()
         self.waitlist = WaitList()
         self.admin = Admin()
-        self.database = Database()
+        self.database = Database(logger=logger, notification_sender=self.send_msg)
+        self.mailer = Mailer(self.send_msg)
+        self.thread_lock = Lock()
         if contest_running:
             try:
                 self.contest = Contest()
@@ -34,11 +38,6 @@ class Bot:
                 exit_text = f"Ошибка чтения 'contest_participants.csv'. Удалите его перед запуском бота.\n{repr(e)}"
                 logger.error(exit_text)
                 exit(exit_text)
-        resp_flag, resp_text = self.database.init_table()
-        if resp_flag is False:
-            logger.info(resp_text)
-        else:
-            logger.info("База номеров и балансов прочитана успешно.")
 
     def get_first_name_last_name(self, user_id) -> tuple:
         user_info = self.vk_api.users.get(user_ids=user_id)[0]
@@ -55,7 +54,13 @@ class Bot:
             msg_content["keyboard"] = keyboard.get_keyboard()
         if attachments:
             msg_content["attachment"] = attachments
-        self.vk_api.messages.send(**msg_content)
+        try:
+            self.vk_api.messages.send(**msg_content)
+        except vk_api.ApiError:
+            logger.error(f"Ошибка API. Сообщение пользователю id{to_user} не отправлено. "
+                         f"Возможно, пользователь запретил сообщения.")
+        else:
+            logger.info(f"Отправлено сообщение пользователю id{to_user}")
 
     def send_default_keyboard(self, to_user, message=None):
         if to_user in self.admin.admin_list:
@@ -88,7 +93,7 @@ class Bot:
         tmp = to_admin_buy_certificate.format(name, user_id, self.waitlist.get_user_data(user_id, "email"),
                                               self.waitlist.get_user_data(user_id, "cheque"), text)
         self.send_msg(to_user=self.admin.manager, message=tmp,
-                      attachments=self.get_attachments_links(message.attachments))
+                      attachments=self.extract_attachments_from_message(message.attachments))
         self.send_default_keyboard(to_user=user_id, message=certificate_after_payment)
 
     def initialize_user_registration(self, user_id):
@@ -106,9 +111,9 @@ class Bot:
         self.send_default_keyboard(to_user=user_id, message=get_balance_message)
 
     def process_get_bonus_balance(self, user_id, text):
-        result, error = self.database.get_balance_by_phone(text)
+        result, error_happened = self.database.get_balance_by_phone(text)
         response = get_balance_response.format(result)
-        if error and user_id not in self.admin.admin_list:
+        if error_happened and user_id not in self.admin.admin_list:
             self.send_msg(to_user=self.admin.manager,
                           message=f"Ошибка поиска номера {text} в базе данных. Ответ на запрос: {response}")
         self.send_default_keyboard(to_user=user_id, message=response)
@@ -131,7 +136,7 @@ class Bot:
         self.send_default_keyboard(to_user=user_id, message=response)
 
     @staticmethod
-    def get_attachments_links(attachments):
+    def extract_attachments_from_message(attachments):
         result = []
         attachments_description = []
         photo_links = None
@@ -150,7 +155,7 @@ class Bot:
 
     def process_attachments(self, user_id, text, message):
         name = " ".join(self.get_first_name_last_name(user_id))
-        photo_links, attachments_description = self.get_attachments_links(message.attachments)
+        photo_links, attachments_description = self.extract_attachments_from_message(message.attachments)
         tmp = to_admin_photo_attachment.format(name, user_id, text, attachments_description)
         self.send_msg(to_user=self.admin.manager, message=tmp, attachments=photo_links)
 
@@ -227,10 +232,7 @@ class Bot:
 
         elif command == "new_database":
             self.send_msg(to_user=user_id, message="Запущена процедура обновления таблицы.")
-            resp_text = self.database.init_table(force_update=True)[1]
-            if user_id != self.admin.manager:
-                self.send_msg(to_user=user_id, message=resp_text)
-            self.send_msg(to_user=self.admin.manager, message=resp_text)
+            self.database.load_data(admin_update_notify_by=user_id)
 
         elif command == "set_manager":
             admin_names = [self.get_first_name_last_name(admin) for admin in self.admin.admin_list]
@@ -275,24 +277,25 @@ class Bot:
             payload = json.loads(event.message.payload)
             self.controller_payload(user_id, payload)
 
-    def get_table_up_to_date(self):
-        """ Проверяет, актуальна ли загруженная база данных, если нет - идёт обновлять """
-        file_upload_time = timedelta(hours=1, minutes=1)      # Указываем время, когда новая БД должна появиться в папке
-        current_date = datetime.utcnow() + timedelta(hours=timezone_hours)
-        actual_database_time = current_date - file_upload_time
-        actual_database_day = actual_database_time.strftime(date_format)
-        if actual_database_day != self.database.day_created:
-            result = self.database.init_table()
-            if result[0]:
-                logger.info("Автоматически обновлена таблица балансов")
-            else:
-                logger.info("Ошибка автоматического обновления таблицы балансов: " + result[1])
+    def start_daemons(self):
+        database_daemon = DailyTaskDaemon(target_obj=self.database, func_to_call='load_data', lock=self.thread_lock)
+        mailer_daemon = DailyTaskDaemon(target_obj=self.mailer, func_to_call='do_mailing', lock=self.thread_lock)
+
+        database_daemon.run_daily_task(action_time_hour=db_update_hour,
+                                       action_time_minutes=db_update_minutes,
+                                       auto_update=True)
+        mailer_daemon.run_daily_task(action_time_hour=mailing_hour, action_time_minutes=mailing_minutes)
+
+    def start_listen(self):
+        from time import sleep
+        for event in self.long_poll.listen():
+            with self.thread_lock:  # блокируем переключение потоков на время обработки сообщения
+                logger.debug(f"from: {event.message.from_id} | "
+                             f"text: {event.message.text} | "
+                             f"payload: {event.message.payload} | "
+                             f"attached:{[att['type'] for att in event.message.attachments]}")
+                self.controller(event)
 
     def start(self):
-        for event in self.long_poll.listen():
-            self.get_table_up_to_date()
-            self.controller(event)
-            logger.debug(f"from: {event.message.from_id} | "
-                         f"text: {event.message.text} | "
-                         f"payload: {event.message.payload} | "
-                         f"attached:{[att['type'] for att in event.message.attachments]}")
+        self.start_daemons()
+        self.start_listen()

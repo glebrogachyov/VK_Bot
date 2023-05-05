@@ -1,55 +1,57 @@
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 import pandas as pd
 import re
 
-from storage.settings.db_config import *
+from storage.settings.db_config import db_folder, csv_encoding, csv_separator, date_format, test_phones
 from storage.settings.messages import balance_found, balance_not_found, multiple_balance_found, too_many_balances
+from services.utilities import remove_files, get_files_list_sorted, get_file_creation_date
+
+keep_files_amount = 2
 
 
 class Database:
-    def __init__(self):
+    def __init__(self, logger=None, notification_sender=None):
         self.incorrect_numbers = 0
         self.tmp_table = None
         self.database: pd.DataFrame = pd.DataFrame({"phone": [None], "balance": [None]})
         self.day_created = None
 
-    @staticmethod
-    def remove_db_files(filenames):
-        for file in filenames:
-            os.remove(data_folder + file)
+        self.logger = logger
+        self.notification_sender = notification_sender
 
-    def init_table(self, force_update=False):
+    def load_data(self, lock, admin_update_notify_by=None, auto_update=False):
         try:
-            csv_files = [filename for filename in os.listdir(data_folder) if "Остатки по дисконтным картам на"
-                         in filename and filename.endswith(".csv")]
-            if not csv_files:
-                return False, f"В директории нет файлов с балансами пользователей"
+            csv_files = get_files_list_sorted(db_folder, "Остатки по дисконтным картам на")
+            remove_files(db_folder, csv_files[:-keep_files_amount])
 
-            csv_files.sort(key=lambda f: os.path.getmtime(data_folder + f))
-
-            db_path = data_folder + csv_files[-1]
-            self.remove_db_files(csv_files[:-2])
-            file_date = datetime.utcfromtimestamp(os.path.getmtime(db_path)) + timedelta(hours=timezone_hours)
+            db_path = db_folder + csv_files[-1]
+            file_date = get_file_creation_date(db_path)
             table_day_created = datetime.date(file_date).strftime(date_format)
-            if table_day_created == self.day_created and not force_update:
-                return False, "В директории не появилось файла новее, чем тот, что был загружен в память"
 
-            self.tmp_table = pd.read_csv(filepath_or_buffer=db_path,
-                                         sep=csv_separator,
-                                         encoding=csv_encoding,
-                                         names=["phone", "balance"],
-                                         converters={"phone": str, "balance": str})
+            if table_day_created == self.day_created and not admin_update_notify_by:
+                self.logger.info("[Database] В директории не появилось файла новее, чем тот, что был загружен в память")
+                return
 
+            self.tmp_table = pd.read_csv(filepath_or_buffer=db_path, sep=csv_separator, encoding=csv_encoding,
+                                         names=["phone", "balance"], converters={"phone": str, "balance": str})
             self.tmp_table["balance"].fillna("0", inplace=True)
 
             rows_read = self.tmp_table["phone"].describe()["count"]
             unique_rows = self.tmp_table["phone"].describe()["unique"]
 
         except FileNotFoundError as e:
-            return False, f"Не найден файл с балансами пользователей.\nОшибка: {e}"
+            error_text = f"[Database] Не найден файл с балансами пользователей.\n\tОшибка: {e}"
+            self.logger.error(error_text)
+            if admin_update_notify_by:
+                self.notification_sender(to_user=admin_update_notify_by, message=error_text)
+            return
         except Exception as e:
-            return False, f"Не удалось прочитать таблицу.\nОшибка: {e}"
+            error_text = f"[Database] Не удалось прочитать таблицу.\n\tОшибка: {e}"
+            self.logger.error(error_text)
+            if admin_update_notify_by:
+                self.notification_sender(to_user=admin_update_notify_by, message=error_text)
+            return
 
         self.normalize_table(self.tmp_table)
 
@@ -65,14 +67,29 @@ class Database:
                 test_res = self.get_balance_by_phone(phone_number=test_number, df=self.tmp_table)[0]
                 resp_text += f'\nВведённый номер:  "{test_number}"\n{test_res}- - - '
         except pd.errors.IndexingError as e:
-            resp_flag, resp_text = False, f"pandas: ошибка обновления таблицы, упала на тестах:\n{e}"
+            error_text = f"[Database] pandas: ошибка обновления таблицы, упала на тестах:\n\t{e}"
+            self.logger.error(error_text)
+            if admin_update_notify_by:
+                self.notification_sender(to_user=admin_update_notify_by, message=error_text)
+            return
         except Exception as e:
-            resp_flag, resp_text = False, f"Ошибка обновления таблицы:\n{e}"
+            error_text = f"[Database] Ошибка обновления таблицы на этапе тестовых запросов:\n\t{e}"
+            self.logger.error(error_text)
+            if admin_update_notify_by:
+                self.notification_sender(to_user=admin_update_notify_by, message=error_text)
+            return
 
         self.database, self.tmp_table = self.tmp_table, None
         self.day_created = table_day_created
 
-        return True, resp_text
+        if admin_update_notify_by:
+            self.logger.info("[Database] Обновление базы данных, запущенное администратором, прошло успешно")
+            self.notification_sender(to_user=admin_update_notify_by, message=resp_text)
+        elif auto_update:
+            self.logger.info("[Database] Автоматическое обновление базы данных прошло успешно")
+        else:
+            self.logger.info("[Database] База данных успешно загружена в память")
+        return
 
     def normalize_phone(self, phone_number: str) -> str:
         if type(phone_number) is not str:
