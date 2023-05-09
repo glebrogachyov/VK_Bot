@@ -20,7 +20,7 @@ class Database:
         self.logger = logger
         self.notification_sender = notification_sender
 
-    def load_data(self, lock, admin_update_notify_by=None, auto_update=False):
+    def load_data(self, admin_update_notify_by=None, auto_update=False):
         try:
             csv_files = get_files_list_sorted(db_folder, "Остатки по дисконтным картам на")
             remove_files(db_folder, csv_files[:-keep_files_amount])
@@ -41,13 +41,13 @@ class Database:
             unique_rows = self.tmp_table["phone"].describe()["unique"]
 
         except FileNotFoundError as e:
-            error_text = f"[Database] Не найден файл с балансами пользователей.\n\tОшибка: {e}"
+            error_text = f"[Database] Не найден файл с балансами пользователей.\n\t\t\t\t\t\t\t\tОшибка: {e}"
             self.logger.error(error_text)
             if admin_update_notify_by:
                 self.notification_sender(to_user=admin_update_notify_by, message=error_text)
             return
         except Exception as e:
-            error_text = f"[Database] Не удалось прочитать таблицу.\n\tОшибка: {e}"
+            error_text = f"[Database] Не удалось прочитать таблицу.\n\t\t\t\t\t\t\t\tОшибка: {e}"
             self.logger.error(error_text)
             if admin_update_notify_by:
                 self.notification_sender(to_user=admin_update_notify_by, message=error_text)
@@ -67,13 +67,13 @@ class Database:
                 test_res = self.get_balance_by_phone(phone_number=test_number, df=self.tmp_table)[0]
                 resp_text += f'\nВведённый номер:  "{test_number}"\n{test_res}- - - '
         except pd.errors.IndexingError as e:
-            error_text = f"[Database] pandas: ошибка обновления таблицы, упала на тестах:\n\t{e}"
+            error_text = f"[Database] pandas: ошибка обновления таблицы, упала на тестах:\n\t\t\t\t\t\t\t\t{e}"
             self.logger.error(error_text)
             if admin_update_notify_by:
                 self.notification_sender(to_user=admin_update_notify_by, message=error_text)
             return
         except Exception as e:
-            error_text = f"[Database] Ошибка обновления таблицы на этапе тестовых запросов:\n\t{e}"
+            error_text = f"[Database] Ошибка обновления таблицы на этапе тестовых запросов:\n\t\t\t\t\t\t\t\t{e}"
             self.logger.error(error_text)
             if admin_update_notify_by:
                 self.notification_sender(to_user=admin_update_notify_by, message=error_text)

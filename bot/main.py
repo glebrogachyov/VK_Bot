@@ -1,25 +1,19 @@
+from requests.exceptions import ConnectionError
+
 from server import Bot
 from services.logger import logger
-import requests
-import time
 from storage.settings.config import token, group_id
 
 
-@logger.catch
 def main():
-    while True:
-        try:
-            bot = Bot(token, group_id)
-            logger.info("Запуск бота")
-            bot.start()
-        except requests.exceptions.RequestException:
-            logger.error("Бот остановлен. err: ConnectionError")
-        except Exception as e:
-            logger.error("Бот остановлен. err: " + repr(e))
-        except BaseException as be:
-            logger.error("Бот остановлен. err be: " + repr(be))
-        finally:
-            time.sleep(1)
+    try:
+        bot = Bot(token, group_id)
+        logger.info("Запуск бота")
+        bot.start()
+    except ConnectionError as ce:
+        logger.error(f"Бот умер. Ошибка с подключением к сети: \n\t{ce}")
+    except Exception as e:
+        logger.error(f"Бот умер. Ошибка: \n\t{e}")
 
 
 if __name__ == '__main__':
