@@ -1,5 +1,5 @@
-# db_folder = "shared_folder/"
-db_folder = "/home/grogachev/bot_test/"
+db_folder = "shared_folder/"
+# db_folder = "/home/grogachev/bot_test/"
 
 csv_encoding = "cp1252"
 

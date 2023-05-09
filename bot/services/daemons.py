@@ -19,10 +19,10 @@ class DailyTaskDaemon:
     def do_action_then_sleep(self, action_time_hour, action_time_minutes, *args, **kwargs):
         while True:
             try:
+                action_func = getattr(self.worker_instance, self.action_method)
+                logger.info(f"[Daemon] Запуск процесса {self.action_method}")
                 with self.lock:
-                    action_func = getattr(self.worker_instance, self.action_method)
-                    logger.info(f"[Daemon] Запуск процесса {self.action_method}")
-                    action_func(self.lock)
+                    action_func()
                 while True:
                     time_to_sleep = calculate_sleep_time(action_time_hour, action_time_minutes)
                     hours_to_sleep = time_to_sleep // 3600
@@ -31,11 +31,12 @@ class DailyTaskDaemon:
                     logger.info(f"[Daemon] {worker_name} засыпает на {hours_to_sleep} ч. {minutes_to_sleep} мин.")
                     sleep(time_to_sleep)
                     with self.lock:
-                        action_func(self.lock, *args, **kwargs)
-            except:
+                        action_func(*args, **kwargs)
+            except Exception as e:
                 logger.error(f"[Daemon] Ошибка во время работы процесса {get_object_classname(self.worker_instance)}.\n"
-                             f"\tПовторный перезапуск потока через 10 минут. Если не оживёт - надо перезапускать бота.")
-                sleep(10*60)
+                             f"\terror: {repr(e)}\n"
+                             f"\tПовторный перезапуск потока через минуту. Если не оживает - надо перезапускать бота.")
+                sleep(60)
 
     def run_daily_task(self, action_time_hour: int, *args, action_time_minutes: int = 0, **kwargs):
         """

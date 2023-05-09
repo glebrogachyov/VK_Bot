@@ -58,9 +58,9 @@ class Bot:
             self.vk_api.messages.send(**msg_content)
         except vk_api.ApiError:
             logger.error(f"Ошибка API. Сообщение пользователю id{to_user} не отправлено. "
-                         f"Возможно, пользователь запретил сообщения.")
+                         f"Возможно, пользователь запретил сообщения от бота.")
         else:
-            logger.info(f"Отправлено сообщение пользователю id{to_user}")
+            logger.info(f"Отправлено сообщение пользователю id{to_user}.")
 
     def send_default_keyboard(self, to_user, message=None):
         if to_user in self.admin.admin_list:
@@ -281,20 +281,23 @@ class Bot:
         database_daemon = DailyTaskDaemon(target_obj=self.database, func_to_call='load_data', lock=self.thread_lock)
         mailer_daemon = DailyTaskDaemon(target_obj=self.mailer, func_to_call='do_mailing', lock=self.thread_lock)
 
-        database_daemon.run_daily_task(action_time_hour=db_update_hour,
-                                       action_time_minutes=db_update_minutes,
+        database_daemon.run_daily_task(action_time_hour=db_update_hour, action_time_minutes=db_update_minutes,
                                        auto_update=True)
         mailer_daemon.run_daily_task(action_time_hour=mailing_hour, action_time_minutes=mailing_minutes)
 
     def start_listen(self):
-        from time import sleep
-        for event in self.long_poll.listen():
-            with self.thread_lock:  # блокируем переключение потоков на время обработки сообщения
-                logger.debug(f"from: {event.message.from_id} | "
-                             f"text: {event.message.text} | "
-                             f"payload: {event.message.payload} | "
-                             f"attached:{[att['type'] for att in event.message.attachments]}")
-                self.controller(event)
+        try:
+            for event in self.long_poll.listen():
+                with self.thread_lock:  # блокируем переключение потоков на время обработки сообщения
+                    logger.debug(f"from: {event.message.from_id} | "
+                                 f"text: {event.message.text} | "
+                                 f"payload: {event.message.payload} | "
+                                 f"attached:{[att['type'] for att in event.message.attachments]}")
+                    self.controller(event)
+        except Exception as e:
+            logger.error(f"Ошибка в главном модуле бота. Возможно, пропало подключение.")
+            logger.error(f"Бот умирает в надежде, что докер не отвалится и переподнимет его.\n{repr(e)}")
+            exit()
 
     def start(self):
         self.start_daemons()
