@@ -36,6 +36,7 @@ class DailyTaskDaemon:
                 logger.error(f"[Daemon] Ошибка во время работы процесса {get_object_classname(self.worker_instance)}.\n"
                              f"\terror: {repr(e)}\n"
                              f"\tПовторный перезапуск потока через минуту. Если не оживает - надо перезапускать бота.")
+
                 sleep(60)
 
     def run_daily_task(self, action_time_hour: int, *args, action_time_minutes: int = 0, **kwargs):
