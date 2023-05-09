@@ -1,2 +1,2 @@
-# mailer_folder = "shared_folder/mailing/"
-mailer_folder = "/home/grogachev/bot_test/mailer/"
+mailer_folder = "shared_folder/mailer/"
+# mailer_folder = "/home/grogachev/bot_test/mailer/"
