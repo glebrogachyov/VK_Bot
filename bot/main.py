@@ -8,7 +8,7 @@ from storage.settings.config import token, group_id
 def main():
     try:
         bot = Bot(token, group_id)
-        logger.info("Запуск бота")
+        logger.info("\n\nЗапуск бота")
         bot.start()
     except ConnectionError as ce:
         logger.error(f"Бот умер. Ошибка с подключением к сети: \n\t{ce}")
