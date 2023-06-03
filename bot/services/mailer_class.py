@@ -44,7 +44,7 @@ class Mailer:
 
     def build_current_day_mailing_list(self):
         time_now = get_correct_datetime()
-        if time_now.hour <= mailing_hour and time_now.minute < mailing_minutes:
+        if time_now.hour * 60 + time_now.minute < mailing_hour * 60 + mailing_minutes:
             self.mailing_list = set()
             return
 
